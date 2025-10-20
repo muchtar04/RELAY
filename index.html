@@ -9,9 +9,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-    // Konfigurasi Firebase
+    // 🔧 Konfigurasi Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD7uqOB4-2rInIjnZurkn5OJhfAR7H0wEI",
       authDomain: "relay-761db.firebaseapp.com",
@@ -22,12 +22,12 @@
       appId: "1:213196876061:web:e07d90d76a00d00b8799f4"
     };
 
-    // Inisialisasi Firebase
+    // 🚀 Inisialisasi Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
 
-    // Elemen HTML
+    // 🔗 Ambil elemen HTML
     const loginDiv = document.getElementById("login");
     const dashboardDiv = document.getElementById("dashboard");
     const emailInput = document.getElementById("email");
@@ -35,11 +35,10 @@
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const statusDiv = document.getElementById("status");
-    const modeToggle = document.getElementById("modeToggle");
     const onBtn = document.getElementById("onBtn");
     const offBtn = document.getElementById("offBtn");
 
-    // ==== Login ====
+    // 🔐 Login Firebase
     loginBtn.addEventListener("click", () => {
       const email = emailInput.value;
       const password = passwordInput.value;
@@ -48,55 +47,36 @@
         .catch(error => alert("❌ Login gagal: " + error.message));
     });
 
-    // ==== Status login ====
+    // 👤 Status login pengguna
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loginDiv.style.display = "none";
         dashboardDiv.style.display = "block";
 
-        // Pantau perubahan realtime dari Firebase
-        const relayRef = ref(db, "Relay/");
+        // 🔁 Update status pompa realtime dari Firebase
+        const relayRef = ref(db, "Relay/status");
         onValue(relayRef, (snapshot) => {
-          const data = snapshot.val();
-          if (!data) return;
-
-          const mode = data.mode ?? "AUTO";
-          const status = data.status ?? "--";
-          statusDiv.textContent = `Mode: ${mode} | Pompa: ${status}`;
-
-          // Update posisi toggle
-          modeToggle.checked = (mode === "MANUAL");
-
-          // Nonaktifkan tombol ON/OFF saat mode AUTO
-          onBtn.disabled = (mode === "AUTO");
-          offBtn.disabled = (mode === "AUTO");
+          const status = snapshot.val();
+          statusDiv.textContent = "Status Pompa: " + (status ?? "--");
         });
 
-        // ==== Kontrol Mode ====
-        modeToggle.addEventListener("change", () => {
-          const newMode = modeToggle.checked ? "MANUAL" : "AUTO";
-          update(ref(db, { mode: newMode }));
-          set(ref(db, "Relay/mode"), newMode);
-        });
-
-        // ==== Kontrol Pompa Manual ====
+        // ⚙️ Tombol kontrol pompa
         onBtn.addEventListener("click", () => set(ref(db, "Relay/command"), "ON"));
         offBtn.addEventListener("click", () => set(ref(db, "Relay/command"), "OFF"));
-
       } else {
         loginDiv.style.display = "block";
         dashboardDiv.style.display = "none";
       }
     });
 
-    // ==== Logout ====
+    // 🚪 Logout
     logoutBtn.addEventListener("click", () => signOut(auth));
   </script>
 
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f2f6f7;
+      background: #eef2f3;
       text-align: center;
       padding: 20px;
     }
@@ -110,14 +90,16 @@
       border: 1px solid #ccc;
       font-size: 16px;
     }
+
     button {
-      padding: 10px 25px;
+      padding: 10px 30px;
       border: none;
       border-radius: 8px;
-      font-size: 17px;
+      font-size: 18px;
       cursor: pointer;
       transition: 0.3s;
     }
+
     #loginBtn { background: #3498db; color: white; }
     #loginBtn:hover { background: #2980b9; }
 
@@ -131,47 +113,13 @@
     #logoutBtn:hover { background: #7f8c8d; }
 
     .status {
-      margin-top: 20px;
-      font-size: 20px;
+      margin-top: 25px;
+      font-size: 22px;
       background: white;
       display: inline-block;
-      padding: 15px 25px;
+      padding: 15px 30px;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .mode-switch {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .toggle {
-      width: 50px;
-      height: 26px;
-      background-color: #ccc;
-      border-radius: 13px;
-      position: relative;
-      cursor: pointer;
-    }
-    .toggle::before {
-      content: "";
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 20px;
-      height: 20px;
-      background: white;
-      border-radius: 50%;
-      transition: 0.3s;
-    }
-    input[type="checkbox"]:checked + .toggle {
-      background-color: #3498db;
-    }
-    input[type="checkbox"]:checked + .toggle::before {
-      transform: translateX(24px);
     }
 
     .button-group {
@@ -179,12 +127,17 @@
       justify-content: center;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 15px;
     }
 
     @media (max-width: 600px) {
-      button { width: 85%; max-width: 300px; }
-      .status { font-size: 18px; padding: 12px 20px; }
+      button {
+        width: 80%;
+        max-width: 300px;
+      }
+      .status {
+        font-size: 20px;
+        padding: 12px 20px;
+      }
     }
   </style>
 </head>
@@ -192,7 +145,7 @@
 <body>
   <h2>🌿 Relay + Pompa | IoT Dashboard</h2>
 
-  <!-- Login -->
+  <!-- 🔐 Login -->
   <div id="login">
     <h3>Login ke Firebase</h3>
     <input type="email" id="email" placeholder="Masukkan Email"><br>
@@ -200,21 +153,14 @@
     <button id="loginBtn">Login</button>
   </div>
 
-  <!-- Dashboard -->
+  <!-- 📊 Dashboard -->
   <div id="dashboard" style="display:none;">
-    <div class="mode-switch">
-      <label>Mode Otomatis</label>
-      <input type="checkbox" id="modeToggle" style="display:none;">
-      <label for="modeToggle" class="toggle"></label>
-      <label>Mode Manual</label>
-    </div>
-
     <div class="button-group">
       <button id="onBtn">Pompa ON</button>
       <button id="offBtn">Pompa OFF</button>
     </div>
 
-    <div class="status" id="status">Mode: -- | Pompa: --</div>
+    <div class="status" id="status">Status Pompa: --</div>
 
     <br>
     <button id="logoutBtn">Logout</button>
