@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🌿Relay+Pompa_Web IoT Dashboard</title>
+  <title>🌿 Relay + Pompa | IoT Dashboard</title>
 
   <!-- Firebase Modular SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
     // Konfigurasi Firebase
     const firebaseConfig = {
@@ -35,10 +35,11 @@
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const statusDiv = document.getElementById("status");
+    const modeToggle = document.getElementById("modeToggle");
     const onBtn = document.getElementById("onBtn");
     const offBtn = document.getElementById("offBtn");
 
-    // Login
+    // ==== Login ====
     loginBtn.addEventListener("click", () => {
       const email = emailInput.value;
       const password = passwordInput.value;
@@ -47,35 +48,55 @@
         .catch(error => alert("❌ Login gagal: " + error.message));
     });
 
-    // Status login
+    // ==== Status login ====
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loginDiv.style.display = "none";
         dashboardDiv.style.display = "block";
 
-        // Realtime status pompa
-        const relayRef = ref(db, "Relay/status");
+        // Pantau perubahan realtime dari Firebase
+        const relayRef = ref(db, "Relay/");
         onValue(relayRef, (snapshot) => {
-          const status = snapshot.val();
-          statusDiv.textContent = "Status Pompa: " + (status ?? "--");
+          const data = snapshot.val();
+          if (!data) return;
+
+          const mode = data.mode ?? "AUTO";
+          const status = data.status ?? "--";
+          statusDiv.textContent = `Mode: ${mode} | Pompa: ${status}`;
+
+          // Update posisi toggle
+          modeToggle.checked = (mode === "MANUAL");
+
+          // Nonaktifkan tombol ON/OFF saat mode AUTO
+          onBtn.disabled = (mode === "AUTO");
+          offBtn.disabled = (mode === "AUTO");
         });
 
-        // Tombol kontrol
+        // ==== Kontrol Mode ====
+        modeToggle.addEventListener("change", () => {
+          const newMode = modeToggle.checked ? "MANUAL" : "AUTO";
+          update(ref(db, { mode: newMode }));
+          set(ref(db, "Relay/mode"), newMode);
+        });
+
+        // ==== Kontrol Pompa Manual ====
         onBtn.addEventListener("click", () => set(ref(db, "Relay/command"), "ON"));
         offBtn.addEventListener("click", () => set(ref(db, "Relay/command"), "OFF"));
+
       } else {
         loginDiv.style.display = "block";
         dashboardDiv.style.display = "none";
       }
     });
 
+    // ==== Logout ====
     logoutBtn.addEventListener("click", () => signOut(auth));
   </script>
 
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #eef2f3;
+      background: #f2f6f7;
       text-align: center;
       padding: 20px;
     }
@@ -90,14 +111,13 @@
       font-size: 16px;
     }
     button {
-      padding: 10px 30px;
+      padding: 10px 25px;
       border: none;
       border-radius: 8px;
-      font-size: 18px;
+      font-size: 17px;
       cursor: pointer;
       transition: 0.3s;
     }
-
     #loginBtn { background: #3498db; color: white; }
     #loginBtn:hover { background: #2980b9; }
 
@@ -111,13 +131,47 @@
     #logoutBtn:hover { background: #7f8c8d; }
 
     .status {
-      margin-top: 25px;
-      font-size: 22px;
+      margin-top: 20px;
+      font-size: 20px;
       background: white;
       display: inline-block;
-      padding: 15px 30px;
+      padding: 15px 25px;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .mode-switch {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .toggle {
+      width: 50px;
+      height: 26px;
+      background-color: #ccc;
+      border-radius: 13px;
+      position: relative;
+      cursor: pointer;
+    }
+    .toggle::before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    input[type="checkbox"]:checked + .toggle {
+      background-color: #3498db;
+    }
+    input[type="checkbox"]:checked + .toggle::before {
+      transform: translateX(24px);
     }
 
     .button-group {
@@ -125,23 +179,18 @@
       justify-content: center;
       flex-wrap: wrap;
       gap: 10px;
+      margin-top: 15px;
     }
 
     @media (max-width: 600px) {
-      button {
-        width: 80%;
-        max-width: 300px;
-      }
-      .status {
-        font-size: 20px;
-        padding: 12px 20px;
-      }
+      button { width: 85%; max-width: 300px; }
+      .status { font-size: 18px; padding: 12px 20px; }
     }
   </style>
 </head>
 
 <body>
-  <h2>🌿Relay+Pompa_Web IoT Dashboard</h2>
+  <h2>🌿 Relay + Pompa | IoT Dashboard</h2>
 
   <!-- Login -->
   <div id="login">
@@ -153,20 +202,22 @@
 
   <!-- Dashboard -->
   <div id="dashboard" style="display:none;">
-    <h3></h3>
+    <div class="mode-switch">
+      <label>Mode Otomatis</label>
+      <input type="checkbox" id="modeToggle" style="display:none;">
+      <label for="modeToggle" class="toggle"></label>
+      <label>Mode Manual</label>
+    </div>
 
     <div class="button-group">
       <button id="onBtn">Pompa ON</button>
       <button id="offBtn">Pompa OFF</button>
     </div>
 
-    <!-- Status di bawah tombol -->
-    <div class="status" id="status">Status Pompa: --</div>
+    <div class="status" id="status">Mode: -- | Pompa: --</div>
 
     <br>
     <button id="logoutBtn">Logout</button>
   </div>
 </body>
 </html>
-
-
