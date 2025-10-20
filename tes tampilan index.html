@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🌿 Kontrol Pompa Irigasi - ESP32 LoRa</title>
+
+  <!-- Gunakan Firebase versi Modular -->
+  <script type="module">
+    // Import modul Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+    // Konfigurasi Firebase
+    const firebaseConfig = {
+  	apiKey: "AIzaSyD7uqOB4-2rInIjnZurkn5OJhfAR7H0wEI",
+  	authDomain: "relay-761db.firebaseapp.com",
+  	databaseURL: "https://relay-761db-default-rtdb.asia-southeast1.firebasedatabase.app",
+  	projectId: "relay-761db",
+  	storageBucket: "relay-761db.firebasestorage.app",
+  	messagingSenderId: "213196876061",
+  	appId: "1:213196876061:web:e07d90d76a00d00b8799f4"
+	};
+
+    // Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Elemen HTML
+    const loginDiv = document.getElementById("login");
+    const dashboardDiv = document.getElementById("dashboard");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const statusDiv = document.getElementById("status");
+    const onBtn = document.getElementById("onBtn");
+    const offBtn = document.getElementById("offBtn");
+
+    // Tombol login
+    loginBtn.addEventListener("click", () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          alert("✅ Login berhasil!");
+        })
+        .catch(error => {
+          alert("❌ Login gagal: " + error.message);
+        });
+    });
+
+    // Deteksi status login
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginDiv.style.display = "none";
+        dashboardDiv.style.display = "block";
+
+        // Referensi status pompa
+        const relayRef = ref(db, "Relay/status");
+
+        // Tampilkan status realtime
+        onValue(relayRef, (snapshot) => {
+          const status = snapshot.val();
+          statusDiv.textContent = "Status Pompa: " + status;
+        });
+
+        // Tombol kontrol
+        onBtn.addEventListener("click", () => set(ref(db, "Relay/command"), "ON"));
+        offBtn.addEventListener("click", () => set(ref(db, "Relay/command"), "OFF"));
+
+      } else {
+        loginDiv.style.display = "block";
+        dashboardDiv.style.display = "none";
+      }
+    });
+
+    // Tombol logout
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth);
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #eef2f3;
+      text-align: center;
+      padding: 20px;
+    }
+    h2 { color: #2c3e50; }
+    input {
+      padding: 10px;
+      margin: 8px;
+      width: 220px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    #loginBtn { background: #3498db; color: white; }
+    #loginBtn:hover { background: #2980b9; }
+
+    #onBtn { background: #27ae60; color: white; }
+    #onBtn:hover { background: #2ecc71; }
+
+    #offBtn { background: #e74c3c; color: white; }
+    #offBtn:hover { background: #c0392b; }
+
+    #logoutBtn { background: #95a5a6; color: white; margin-top: 30px; }
+    #logoutBtn:hover { background: #7f8c8d; }
+
+    .status {
+      margin-top: 30px;
+      font-size: 22px;
+      background: white;
+      display: inline-block;
+      padding: 15px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+
+<body>
+  <h2>🌿 Kontrol Pompa Irigasi - ESP32 LoRa</h2>
+
+  <!-- Form Login -->
+  <div id="login">
+    <h3>Login ke Firebase</h3>
+    <input type="email" id="email" placeholder="Masukkan Email"><br>
+    <input type="password" id="password" placeholder="Masukkan Password"><br>
+    <button id="loginBtn">Login</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none;">
+    <h3>Kontrol Manual Pompa</h3>
+    <button id="onBtn">Pompa ON</button>
+    <button id="offBtn">Pompa OFF</button>
+    <div class="status" id="status">Status Pompa: --</div><br>
+    <button id="logoutBtn">Logout</button>
+  </div>
+</body>
+</html>
